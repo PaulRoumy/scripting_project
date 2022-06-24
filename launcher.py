@@ -2,19 +2,30 @@ import logging
 import argparse
 import psutil
 import time
+from datetime import datetime
+from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client.client import write_api
 
-# logging.basicConfig(filename='log_file.log', encoding='utf-8', level=logging.DEBUG)
-# logging.debug('This message should go to the log file')
-# logging.info('So should this')
-# logging.warning('And this, too')
-# logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--seconds", help="launch the program every N seconds", type=int)
 args = parser.parse_args()
 print("number passed as argument for seconds")
 print(args.seconds)
-logging.basicConfig(filename='log_file.log', encoding='utf-8', level=logging.DEBUG)
+# logging.basicConfig(filename='log_file.log', encoding='utf-8', level=logging.DEBUG)
+
+# You can generate an API token from the "API Tokens Tab" in the UI
+token = "VrYhAEZiCOFDHuS6De1MZyDdAnMp50SASpVEwU3rkRsO4PNnWC5-KrWv5v44fgfMGmxWZlIx4bPZ5WmKIsFEcQ=="
+org = "my self"
+bucket = "metricsBucket"
+
+
+with InfluxDBClient(url="http://192.168.56.104:8086", token=token, org=org) as client:
+    point = Point("mem") \
+        .tag("host", "host1") \
+        .field("used_percent", 23.43234543) \
+        .time(datetime.utcnow(), WritePrecision.NS)
+
 
 tasks_to_execute_macOS = ["CPU",
                           psutil.cpu_times(percpu=False),
@@ -115,11 +126,14 @@ tasks_to_execute_macOS = ["CPU",
                           ]
 
 
-def log_info_to_file():
+def log_info_to_bucket(point=point ):
     while True:
         for task in tasks_to_execute_macOS:
-            logging.debug(task)
-        time.sleep(args.seconds)
+            # logging.debug(task)
+            # time.sleep(args.seconds)
+            write_api.write(bucket, org, point)
+            time.sleep(args.seconds)
 
 
-log_info_to_file()
+log_info_to_bucket()
+client.close()
